@@ -428,11 +428,10 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
     if(plot_cluster_maps)
         {
             c5[ican]->cd(c_i + 1);
-
-            cout << "c_i: " << c_i + 1 << endl;
     
             Rescale_histo(cluster2D_all[layer_list[ilayer]],clust_pos_L[layer_list[ilayer]][0][1],clust_pos_R[layer_list[ilayer]][nmodules[layer_list[ilayer]]-1][1]);
             cluster2D_all[layer_list[ilayer]]->Draw("colz");
+
             gPad->Update();
         }
 
@@ -447,6 +446,26 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
             st->SetX2NDC(0.98);
             st->SetY1NDC(0.85);
             st->SetY2NDC(0.93);
+
+            double gem_label_0_x1 = .1875;
+            double gem_label_0_x2 = .22;
+            double gem_label_y1 = 0.06;
+            double gem_label_y2 = 0.1;
+
+            TPaveText *gemLabel0 = new TPaveText(gem_label_0_x1, gem_label_y1, gem_label_0_x2, gem_label_y2, "NDC");
+            TPaveText *gemLabel1 = new TPaveText(gem_label_0_x1 + .2, gem_label_y1, gem_label_0_x2 + .2, gem_label_y2, "NDC");
+            TPaveText *gemLabel2 = new TPaveText(gem_label_0_x1 + .4, gem_label_y1, gem_label_0_x2 + .4, gem_label_y2, "NDC");
+            TPaveText *gemLabel3 = new TPaveText(gem_label_0_x1 + .6, gem_label_y1, gem_label_0_x2 + .6, gem_label_y2, "NDC");
+            gemLabel0->AddText("GEM 0");
+            gemLabel0->Draw();
+            gemLabel1->AddText("GEM 1");
+            gemLabel1->Draw();
+            gemLabel2->AddText("GEM 2");
+            gemLabel2->Draw();
+            gemLabel3->AddText("GEM 3");
+            gemLabel3->Draw();
+
+            
         }
   }
   
