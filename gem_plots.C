@@ -1,6 +1,7 @@
 // Script to make various plots for GEM Modules and Layers
 // Written/Modified/Compiled by John Boyd
-// Last update: Dec. 7, 2021
+// Last update: Dec. 15, 2021
+// Update NOTES: Added labels for GEMs on cluster maps.
 
 // This script makes all the usual diagnositc plots for a set of GEM modules.
 // To run simply check that gem_config.cfg matches your GEM setup. Also make sure that 
