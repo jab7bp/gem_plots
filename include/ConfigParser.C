@@ -55,6 +55,17 @@ void ConfigParser(const char *configfilename){
             }
           }
 
+    if( skey == "uva_xy_x" ){
+      TString stemp = ( (TObjString*) (*tokens)[1] )->GetString();
+      uva_xy_x = stemp.Atof();
+    }
+
+    if( skey == "uva_xy_y" ){
+    TString stemp = ( (TObjString*) (*tokens)[1] )->GetString();
+    uva_xy_y = stemp.Atof();
+    }
+    
+
 
 
 	}

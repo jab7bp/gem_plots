@@ -1,7 +1,9 @@
 // Script to make various plots for GEM Modules and Layers
 // Written/Modified/Compiled by John Boyd
-// Last update: Dec. 15, 2021
-// Update NOTES: Added labels for GEMs on cluster maps.
+// Last update: Dec. 23, 2021
+// Update NOTES: Regardless of what layers are missing the plots will always start with the
+// first layer at the top of the first canvas. 
+// Added lines to show borders between GEMs. Added many labels and info.
 
 // This script makes all the usual diagnositc plots for a set of GEM modules.
 // To run simply check that gem_config.cfg matches your GEM setup. Also make sure that 
@@ -21,11 +23,16 @@
 // X/Y clusters ADC
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <string>
+#include <vector>
+#include <sstream>
 #include "./include/cluster_matching.C"
 #include "./include/convert_uv_to_xy.C"
 #include "./include/Rescale_histo.C"
 #include "./include/Fit_Landau.C"
 #include "./include/Reset_Stats.C"
+#include "./include/set_styles.C"
 
 
 #include "./include/ConfigParser.C"
@@ -43,7 +50,7 @@ struct ChamberCluster;
 struct LayerCluster;
 
 
-void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = true, bool plot_strip_info = false, bool plot_clusters = false, bool plot_adc = false, bool nclust_size = false, int nmax = 100000000, bool skip_events = false){
+void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plot_cluster_maps = true, bool plot_strip_info = false, bool plot_clusters = false, bool plot_adc = false, bool nclust_size = false, int nmax = 100000000, bool skip_events = false){
 
   if(plot_all){
     plot_cluster_maps = true;
@@ -53,7 +60,6 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
     nclust_size = true;
   }
 
-  int first_layer = 1;
 
   TString HitDir = "../Rootfiles/";
 
@@ -67,6 +73,13 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
   t_clust->Add(HitDir + Form("cluster_0_*_%i.root",run));  //Cluster root file
   t_hit->Add(HitDir + Form("hit_*_%i.root",run));        //Hit root file
 
+  ////Parse file name to use info for run labels on graphs ///
+  TString t_clust_name = t_clust->GetFile()->GetName();
+  TObjArray *token_tcn = t_clust_name.Tokenize("_");
+  TString prefix = token_tcn->At(2)->GetName();
+  TString runInfo = prefix + " " + Form("%i", run);
+  
+
   ConfigParser("./include/gem_config.cfg");       //File that lists GEM layers and positions
 
   int nlayermax = 9;         //Should not have more layers or modules than this
@@ -76,7 +89,6 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
   bool skip_event = false;
   int remainder = 82;
   int modulo = 101;
-  
   
   LayerCluster layer_cluster[nlayermax];
   int maxcluster = 5000;     //Events would never have more than 5000 clusters
@@ -91,7 +103,8 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
   int size[maxcluster];
   float adc[maxcluster];
   float pos[maxcluster];
-  
+
+
 
   t_clust->SetBranchAddress("evtID",&evtID);
   t_clust->SetBranchAddress("nCluster",&nCluster);
@@ -129,8 +142,8 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
   double clust_pos_R[nlayermax][nmodmax][2];
 
   //Canvas for Strip info             
-  TCanvas *c;
-  if(plot_cluster_maps) c = new TCanvas("c","",1600,1200);
+  TCanvas *c; //Do we need this canvas?
+  //if(plot_cluster_maps) c = new TCanvas("c","",1600,1200);   ///What does this canvus do? What is it for?
  
   //Canvas for Cluster size info
   TCanvas *c2;
@@ -145,6 +158,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
   if(plot_adc) c4  = new TCanvas("c4","",1600,1200);
 
   //We initialize all the histograms
+  int first_layer = 1;
   for(int ilayer=first_layer; ilayer<layer_list.size(); ilayer++){
   
     layer_cluster[layer_list[ilayer]].GEMtype = GEMtype[layer_list[ilayer]];
@@ -377,7 +391,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
       double adc_max = 0;
 
       //if(layer[istrip] == 1 && moduleID[istrip] == 1) 
-      //	cout<<evtID<<" "<<axis[istrip]<<" "<<adc_all[2][istrip]<<endl;
+    
 
       //Find max adc value
       for(int iadc = 0; iadc < 6; iadc++)
@@ -407,7 +421,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
   TCanvas *c5[ncan];
   if(plot_cluster_maps)
     {
-      for(int ican = 0; ican < ncan; ican++){
+      for(int ican = 0; ican < ncan-1; ican++){
         c5[ican] = new TCanvas(Form("c5_%i",ican),"",1600,1200);
         c5[ican]->Divide(1,3);
         }
@@ -415,29 +429,29 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
 
   gStyle->SetOptFit(011);
 
-  for(int canvas_cnt = 0; canvas_cnt <3; canvas_cnt++)
-  {
-    cout << "canvas cnt: " << canvas_cnt << endl;
-  }
-
-  for(int ilayer= first_layer; ilayer<layer_list.size();ilayer++){
+  
+  int count = 1;
+  int first_canvas = 0;
+  for(int ilayer = first_layer; ilayer<layer_list.size();ilayer++){
+    
     int ican = ilayer/3;
-    
     int c_i = ilayer - ican*3;
+    int canvas_i = first_canvas/3;
 
-    
     if(plot_cluster_maps)
         {
-            c5[ican]->cd(c_i + 1);
-    
+            c5[canvas_i]->cd(count);
             Rescale_histo(cluster2D_all[layer_list[ilayer]],clust_pos_L[layer_list[ilayer]][0][1],clust_pos_R[layer_list[ilayer]][nmodules[layer_list[ilayer]]-1][1]);
             cluster2D_all[layer_list[ilayer]]->Draw("colz");
-
+            TPaveText *runLabel = new TPaveText(.87, .95, .97, .999, "NDC");
+            runLabel->SetBorderSize(1);
+            runLabel->AddText("Run info: " + runInfo);
+            runLabel->Draw();
             gPad->Update();
         }
 
     
-
+    //LABELS and LINES and ETC.
     if(plot_cluster_maps)
         {
             TPaveStats *st = (TPaveStats*)cluster2D_all[layer_list[ilayer]]->FindObject("stats");
@@ -466,19 +480,42 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
             gemLabel3->AddText("GEM 3");
             gemLabel3->Draw();
 
+            bool drawGemLines = true;
+            if(drawGemLines)
+            {
+            TLine *gem00 = new TLine(-2*uva_xy_x, -uva_xy_y/2 - 40, -2*uva_xy_x, uva_xy_y/2 + 40);
+            TLine *gem01 = new TLine(-uva_xy_x, -uva_xy_y/2 - 40, -uva_xy_x, uva_xy_y/2 + 40);
+            TLine *gem12 = new TLine(0, -uva_xy_y/2 - 40, 0, uva_xy_y/2 + 40);
+            TLine *gem23 = new TLine(uva_xy_x, -uva_xy_y/2 - 40, uva_xy_x, uva_xy_y/2 + 40);
+            TLine *gem33 = new TLine(2*uva_xy_x, -uva_xy_y/2 - 40, 2*uva_xy_x, uva_xy_y/2 + 40);
+
+            gemLines(gem00);
+            gemLines(gem01);
+            gemLines(gem12);
+            gemLines(gem23);
+            gemLines(gem33);
+            }
             
+
+
         }
+      count++;
+      if(count == 4)
+        {
+          count = 1;
+        }
+      first_canvas++;
   }
   
 
   // Loop over all layesr in config file
-  for(int ilayer=first_layer; ilayer<layer_list.size(); ilayer++){
+  for(int ilayer=first_layer; ilayer<layer_list.size(); ilayer++){  
     
     //c->SetWindowSize(400*nmodules[layer_list[ilayer]],300*nmodules[layer_list[ilayer]]);
     //c2->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
     //c3->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
     //c4->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
-    if(plot_cluster_maps) c->Divide(nmodules[layer_list[ilayer]],4);
+    //if(plot_cluster_maps) c->Divide(nmodules[layer_list[ilayer]],4);     ///WWhat does this canvus do????
     if(nclust_size) c2->Divide(nmodules[layer_list[ilayer]],4);
     if(plot_clusters) c3->Divide(nmodules[layer_list[ilayer]],3);
     if(plot_adc) c4->Divide(nmodules[layer_list[ilayer]],3);
@@ -591,12 +628,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
     }
 
     //Print canvas to pdf for this layer
-    if(plot_cluster_maps)
-        {
-            if(ilayer == 0 ) c->Print(output + "(");
-            else c->Print(output);
-            c->Clear();
-        }
+    
     if(nclust_size) {
         c2->Print(output);
         c2->Clear();
@@ -611,24 +643,27 @@ void gem_plots(int run = 1000, bool plot_all = false, bool plot_cluster_maps = t
         c4->Print(output);
         c4->Clear();
         }
-    //if(ilayer == layer_list.size()-1) c4->Print(output + ")");
-    //else c4->Print(output);
-
-    //Clear canvas for next layer
     
-    
-    
-    
-
   }
 
-  for(int ican = 0; ican < ncan; ican++){
-
-    if(plot_cluster_maps)
+  
+  //PRINT Cluster Maps
+  if(save) 
+  {
+    if(plot_cluster_maps) 
+    {
+      for(int ican = 0; ican < ncan-1; ican++) {
+        if(ican == 0)
         {
-            if(ican == ncan - 1) c5[ican]->Print(output + ")");
-            else c5[ican]->Print(output);
+          c5[0]->Print(output + "("); //Creating the pdf document
         }
+        if(ican == ncan - 2)
+        {
+          c5[ican]->Print(output + ")"); //Closing the pdf after last canvas
+        }
+        else c5[ican]->Print(output); //Middle canvases
+      }
+    }
   }
 
 
