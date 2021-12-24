@@ -1,9 +1,7 @@
 // Script to make various plots for GEM Modules and Layers
 // Written/Modified/Compiled by John Boyd
 // Last update: Dec. 23, 2021
-// Update NOTES: Regardless of what layers are missing the plots will always start with the
-// first layer at the top of the first canvas. 
-// Added lines to show borders between GEMs. Added many labels and info.
+// Update NOTES: Changed out the plots are saved and added PNGs for each page
 
 // This script makes all the usual diagnositc plots for a set of GEM modules.
 // To run simply check that gem_config.cfg matches your GEM setup. Also make sure that 
@@ -63,7 +61,8 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
 
   TString HitDir = "../Rootfiles/";
 
-  TString output = Form("../plots/clusters/cluster_%i.pdf",run);
+  TString output = Form("../plots/clusters/all_plots_%i.pdf",run);
+  TString clust_output = Form("../plots/clusters/cluster_%i.pdf",run);
 
   gStyle->SetPalette(1);
 
@@ -76,8 +75,10 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
   ////Parse file name to use info for run labels on graphs ///
   TString t_clust_name = t_clust->GetFile()->GetName();
   TObjArray *token_tcn = t_clust_name.Tokenize("_");
+  TObjArray *token_file_name = output.Tokenize(".");
   TString prefix = token_tcn->At(2)->GetName();
   TString runInfo = prefix + " " + Form("%i", run);
+  TString file_name = token_file_name->At(0)->GetName();
   
 
   ConfigParser("./include/gem_config.cfg");       //File that lists GEM layers and positions
@@ -143,7 +144,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
 
   //Canvas for Strip info             
   TCanvas *c; //Do we need this canvas?
-  //if(plot_cluster_maps) c = new TCanvas("c","",1600,1200);   ///What does this canvus do? What is it for?
+  if(plot_all) c = new TCanvas("c","",1600,1200);   
  
   //Canvas for Cluster size info
   TCanvas *c2;
@@ -454,6 +455,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
     //LABELS and LINES and ETC.
     if(plot_cluster_maps)
         {
+           
             TPaveStats *st = (TPaveStats*)cluster2D_all[layer_list[ilayer]]->FindObject("stats");
             st->SetOptStat(11);
             
@@ -515,7 +517,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
     //c2->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
     //c3->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
     //c4->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
-    //if(plot_cluster_maps) c->Divide(nmodules[layer_list[ilayer]],4);     ///WWhat does this canvus do????
+    if(plot_all) c->Divide(nmodules[layer_list[ilayer]],4);    
     if(nclust_size) c2->Divide(nmodules[layer_list[ilayer]],4);
     if(plot_clusters) c3->Divide(nmodules[layer_list[ilayer]],3);
     if(plot_adc) c4->Divide(nmodules[layer_list[ilayer]],3);
@@ -655,13 +657,23 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
       for(int ican = 0; ican < ncan-1; ican++) {
         if(ican == 0)
         {
-          c5[0]->Print(output + "("); //Creating the pdf document
+          c5[0]->Print(clust_output + "("); //Creating the pdf document
         }
         if(ican == ncan - 2)
         {
-          c5[ican]->Print(output + ")"); //Closing the pdf after last canvas
+          c5[ican]->Print(clust_output + ")"); //Closing the pdf after last canvas
         }
-        else c5[ican]->Print(output); //Middle canvases
+        else  if(ican > 0) c5[ican]->Print(clust_output); //Middle canvases
+      }
+    }
+  }
+
+  if(save) 
+  {
+    for(int ican = 0; ican < ncan-1; ican++) {
+      if(plot_cluster_maps) 
+      {
+        c5[ican]->SaveAs(".." + file_name + Form("_%i.png", ican));
       }
     }
   }
