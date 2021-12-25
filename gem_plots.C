@@ -1,7 +1,7 @@
 // Script to make various plots for GEM Modules and Layers
 // Written/Modified/Compiled by John Boyd
-// Last update: Dec. 23, 2021
-// Update NOTES: Changed out the plots are saved and added PNGs for each page
+// Last update: Dec. 24, 2021
+// Update NOTES: Changed Rootfiles directory 
 
 // This script makes all the usual diagnositc plots for a set of GEM modules.
 // To run simply check that gem_config.cfg matches your GEM setup. Also make sure that 
@@ -58,8 +58,9 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
     nclust_size = true;
   }
 
+  char *user = getenv("USER");
 
-  TString HitDir = "../Rootfiles/";
+  TString HitDir = "../../Rootfiles/";
 
   TString output = Form("../plots/clusters/all_plots_%i.pdf",run);
   TString clust_output = Form("../plots/clusters/cluster_%i.pdf",run);
