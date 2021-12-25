@@ -1,7 +1,7 @@
 // Script to make various plots for GEM Modules and Layers
 // Written/Modified/Compiled by John Boyd
 // Last update: Dec. 24, 2021
-// Update NOTES: Changed Rootfiles directory 
+// Update NOTES: fixed locatin of plots folder. Now make directories for pdf and png
 
 // This script makes all the usual diagnositc plots for a set of GEM modules.
 // To run simply check that gem_config.cfg matches your GEM setup. Also make sure that 
@@ -62,8 +62,8 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
 
   TString HitDir = "../../Rootfiles/";
 
-  TString output = Form("../plots/clusters/all_plots_%i.pdf",run);
-  TString clust_output = Form("../plots/clusters/cluster_%i.pdf",run);
+  TString output = Form("../../plots/clusters/all_plots_%i.pdf",run);
+  TString clust_output = Form("cluster_%i.pdf",run);
 
   gStyle->SetPalette(1);
 
@@ -76,11 +76,13 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
   ////Parse file name to use info for run labels on graphs ///
   TString t_clust_name = t_clust->GetFile()->GetName();
   TObjArray *token_tcn = t_clust_name.Tokenize("_");
-  TObjArray *token_file_name = output.Tokenize(".");
+  TObjArray *token_file_name = clust_output.Tokenize(".");
   TString prefix = token_tcn->At(2)->GetName();
   TString runInfo = prefix + " " + Form("%i", run);
   TString file_name = token_file_name->At(0)->GetName();
   
+  TString clust_output_dir = "../../plots/clusters/" + prefix + "_" + run;
+  mkdir(clust_output_dir,0777);
 
   ConfigParser("./include/gem_config.cfg");       //File that lists GEM layers and positions
 
@@ -651,30 +653,35 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
 
   
   //PRINT Cluster Maps
+  TString pdf_dir = "../../plots/clusters/" + prefix + "_" + run + "/pdf";
+  TString png_dir = "../../plots/clusters/" + prefix + "_" + run + "/png";
+
   if(save) 
   {
+    mkdir(pdf_dir, 0777);
     if(plot_cluster_maps) 
     {
       for(int ican = 0; ican < ncan-1; ican++) {
         if(ican == 0)
         {
-          c5[0]->Print(clust_output + "("); //Creating the pdf document
+          c5[0]->Print(pdf_dir + "/" + clust_output + "("); //Creating the pdf document
         }
         if(ican == ncan - 2)
         {
-          c5[ican]->Print(clust_output + ")"); //Closing the pdf after last canvas
+          c5[ican]->Print(pdf_dir + "/" + clust_output + ")"); //Closing the pdf after last canvas
         }
-        else  if(ican > 0) c5[ican]->Print(clust_output); //Middle canvases
+        else  if(ican > 0) c5[ican]->Print(pdf_dir + "/" + clust_output); //Middle canvases
       }
     }
   }
 
   if(save) 
   {
+    mkdir(png_dir, 0777);
     for(int ican = 0; ican < ncan-1; ican++) {
       if(plot_cluster_maps) 
       {
-        c5[ican]->SaveAs(".." + file_name + Form("_%i.png", ican));
+        c5[ican]->SaveAs("../../plots/clusters/" + prefix + "_" + run + "/" + "png/" + file_name + Form("_%i.png", ican));
       }
     }
   }
