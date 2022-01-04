@@ -1,7 +1,9 @@
 // Script to make various plots for GEM Modules and Layers
 // Written/Modified/Compiled by John Boyd
-// Last update: Dec. 24, 2021
-// Update NOTES: fixed locatin of plots folder. Now make directories for pdf and png
+// Original analysis, confifuring, and plot/map-ing by Unknown/Anonymous
+// Last update: Jan. 04, 2022
+// Update NOTES: Now parses arguments with flats (-run, etc.). 
+// Now creates a signle document with all plots for plot_all, etc.
 
 // This script makes all the usual diagnositc plots for a set of GEM modules.
 // To run simply check that gem_config.cfg matches your GEM setup. Also make sure that 
@@ -21,7 +23,9 @@
 // X/Y clusters ADC
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string>
 #include <vector>
 #include <sstream>
@@ -31,6 +35,7 @@
 #include "./include/Fit_Landau.C"
 #include "./include/Reset_Stats.C"
 #include "./include/set_styles.C"
+#include "./include/argparser.C"
 
 
 #include "./include/ConfigParser.C"
@@ -48,15 +53,10 @@ struct ChamberCluster;
 struct LayerCluster;
 
 
-void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plot_cluster_maps = true, bool plot_strip_info = false, bool plot_clusters = false, bool plot_adc = false, bool nclust_size = false, int nmax = 100000000, bool skip_events = false){
+//void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plot_cluster_maps = true, bool plot_strip_info = false, bool plot_clusters = false, bool plot_adc = false, bool nclust_size = false, int nmax = 100000000, bool skip_events = false){
+void gem_plots(TString args = "-run 1000"){
 
-  if(plot_all){
-    plot_cluster_maps = true;
-    plot_strip_info = true;
-    plot_clusters = true;
-    plot_adc = true;
-    nclust_size = true;
-  }
+  argparser(args);
 
   char *user = getenv("USER");
 
@@ -433,7 +433,14 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
 
   gStyle->SetOptFit(011);
 
-  
+  //*******************************************************************
+  //*******************************************************************
+
+  //****************************PLOTTING*******************************
+
+  //*******************************************************************
+  //*******************************************************************
+
   int count = 1;
   int first_canvas = 0;
   for(int ilayer = first_layer; ilayer<layer_list.size();ilayer++){
@@ -516,10 +523,10 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
   // Loop over all layesr in config file
   for(int ilayer=first_layer; ilayer<layer_list.size(); ilayer++){  
     
-    //c->SetWindowSize(400*nmodules[layer_list[ilayer]],300*nmodules[layer_list[ilayer]]);
-    //c2->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
-    //c3->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
-    //c4->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
+    c->SetWindowSize(400*nmodules[layer_list[ilayer]],300*nmodules[layer_list[ilayer]]);
+    c2->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
+    c3->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
+    c4->SetCanvasSize(400*nmodules[layer_list[ilayer]],1200);
     if(plot_all) c->Divide(nmodules[layer_list[ilayer]],4);    
     if(nclust_size) c2->Divide(nmodules[layer_list[ilayer]],4);
     if(plot_clusters) c3->Divide(nmodules[layer_list[ilayer]],3);
@@ -545,14 +552,14 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
           Rescale_histo(hit_y_strip[layer_list[ilayer]][imod],0,nstrips);
           hit_y_strip[layer_list[ilayer]][imod]->Draw();
           Reset_Stats(hit_y_strip[layer_list[ilayer]][imod]);
-
+          
           c->cd(imod + 1 + nmodules[layer_list[ilayer]]*2);
           ADC_x_strip[layer_list[ilayer]][imod]->Draw();
-          Fit_Landau(ADC_x_strip[layer_list[ilayer]][imod]);
+          //Fit_Landau(ADC_x_strip[layer_list[ilayer]][imod]);
           
           c->cd(imod + 1 + nmodules[layer_list[ilayer]]*3);
           ADC_y_strip[layer_list[ilayer]][imod]->Draw();
-          Fit_Landau(ADC_y_strip[layer_list[ilayer]][imod]);
+          //Fit_Landau(ADC_y_strip[layer_list[ilayer]][imod]);
         }
 
 
@@ -620,7 +627,7 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
               line->SetLineWidth(2);
               line->Draw("same");
 
-
+        
               c4->cd(imod + 1 + nmodules[layer_list[ilayer]]*1);
               ADC_x[layer_list[ilayer]][imod]->Draw();
               Fit_Landau(ADC_x[layer_list[ilayer]][imod]);
@@ -632,22 +639,68 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
 
     }
 
+    c->Update();
+
+//*******************************************************************
+//*******************************************************************
+
+//****************************SAVING*********************************
+
+//*******************************************************************
+//*******************************************************************
+
     //Print canvas to pdf for this layer
+    if(plot_all) {
+      TString first_output = " ";
+      TString last_output = " ";
+
+      if(ilayer == first_layer){first_output = output + "(";}
+      else {first_output = output;}
+      if(ilayer == layer_list.size() -1){last_output = output + ")";}
+      else {last_output = output;}
+
+      if(ilayer == first_layer){
+
+        for(int ican = 0; ican < ncan-1; ican++) {
+                if(ican == 0)
+                {
+                  c5[0]->Print(first_output); //Creating the pdf document
+                }
+                
+                else  {c5[ican]->Print(output);} //Middle canvases
+              }
+
+        }
+
+      c2->Print(output);
+  
+      c3->Print(output);
     
-    if(nclust_size) {
-        c2->Print(output);
-        c2->Clear();
-        }
+      c4->Print(last_output);
 
-    if(plot_clusters) {
-        c3->Print(output);
-        c3->Clear();
-        }
+      if(ilayer < layer_list.size() - 1){
+      c2->Clear();
+      c3->Clear();
+      c4->Clear();
+      }
 
-    if(plot_adc) {
-        c4->Print(output);
-        c4->Clear();
-        }
+          
+      }
+
+    // if(nclust_size) {
+    //     c2->Print(current_output);
+    //     c2->Clear();
+    //     }
+
+    // if(plot_clusters) {
+    //     c3->Print(current_output);
+    //     c3->Clear();
+    //     }
+
+    // if(plot_adc) {
+    //     c4->Print(current_output);
+    //     c4->Clear();
+    //     }
     
   }
 
@@ -685,6 +738,5 @@ void gem_plots(int run = 1000, bool plot_all = false, bool save = true, bool plo
       }
     }
   }
-
 
 }
